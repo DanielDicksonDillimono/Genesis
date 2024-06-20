@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 
+#define PI 3.1415
 struct Person{
     double xCoordinate;
     double yCoordinate;
@@ -25,35 +26,59 @@ struct Tree{
     double yCoordinate;
 };
 
-struct UnitVector{
+struct OrientationVector{
     double xCoordinate;
     double yCoordinate;
 };
 
 /*!
-    Returns a unit vector
+    Returns a unit vector when x and y coordinates are known
 */
-UnitVector getUnitVector(const double &xCoordinate, const double &yCoordinate)
+OrientationVector getOrientationUnitVector(const double &xCoordinate, const double &yCoordinate)
 {
-    UnitVector unitVector;
+    OrientationVector orientationVector;
     double hypotenuse = 0;
     hypotenuse = std::sqrt(xCoordinate*xCoordinate + yCoordinate*yCoordinate);
-    unitVector = UnitVector{xCoordinate/hypotenuse , yCoordinate/hypotenuse};
-    return unitVector;
+    orientationVector = OrientationVector{xCoordinate/hypotenuse , yCoordinate/hypotenuse};
+    return orientationVector;
+}
+
+/*!
+    Returns a unit vector when angle is known
+*/
+OrientationVector getOrientationUnitVectorCoordinates(int angle)
+{
+    OrientationVector orientationVector;
+    int vectorAngle = 0;
+    if(angle < 90){ //First quadrant
+        vectorAngle = angle;
+    }
+    else if(angle > 90 && angle < 180){ //Second quadrant
+        vectorAngle = 180 - angle;
+    }
+    else if(angle > 180 && angle < 270){ //Third quadrant
+        vectorAngle = 90 - (270 - angle);
+    }
+    else if(angle > 270 && angle < 360){ //Fourth quadrant
+        vectorAngle = 360 - angle;
+    }
+
+    return orientationVector = OrientationVector{sin(vectorAngle), cos(vectorAngle)};
 }
 
 /*!
     Returns angle relative to the direction the direction the person is facing.
 */
-double findAngleToTree(const Tree &targetTree, const Tree &referencTree, const Person &person){
+double findAngleToTree(const OrientationVector &currentOrientationVector, const Tree &targetTree, const Person &person){
 
     //substract each tree's coordinate from the person's coordinate to enure that the person is used as the origin.
-    UnitVector targetTreeUnitVector = getUnitVector(targetTree.xCoordinate - person.xCoordinate, targetTree.yCoordinate - person.yCoordinate);
-    UnitVector referenceUnitTreeVector = getUnitVector(referencTree.xCoordinate - person.xCoordinate, referencTree.yCoordinate - person.yCoordinate);
-    double dotProduct = (targetTreeUnitVector.xCoordinate * referenceUnitTreeVector.xCoordinate + targetTreeUnitVector.yCoordinate * referenceUnitTreeVector.yCoordinate);
-    double angle = acos(dotProduct);
+    OrientationVector targetTreeOrientationVector = getOrientationUnitVector(targetTree.xCoordinate - person.xCoordinate, targetTree.yCoordinate - person.yCoordinate);
+    double dotProduct = (targetTreeOrientationVector.xCoordinate * currentOrientationVector.xCoordinate + targetTreeOrientationVector.yCoordinate * currentOrientationVector.yCoordinate);
+    double angle = acos(dotProduct) *  180 / PI; //acos(double) returns results expressed in radians. Therefore convert to degrees.
     return angle;
 };
+
+
 
 /*!
     converts user's each individual input inorder to utilized.
@@ -191,35 +216,39 @@ std::vector<Tree> populateMapWithTrees(){
 */
 void calculateOptimalOrientation(const Person &person, const std::vector<Tree> &allTrees){
 
-    UnitVector optimalOrientation;
-    Tree optimalTree;
+    OrientationVector optimalOrientation;
+    int optimalAngle = 0;
 
     std::vector<Tree> maxSeenTrees;
     Tree currentReferenceTree;
 
     std::vector<Tree> currentSeenTrees;
 
-    for(const Tree &currentIndexTree : allTrees){
-        currentReferenceTree = currentIndexTree;
-        for(const Tree &nextCurrentIndexTree : allTrees)
-        {
-            double currentTreeVectorAngle = findAngleToTree(currentReferenceTree, nextCurrentIndexTree, person);
-            if(person.fieldOfViewAngle / 2 > currentTreeVectorAngle)
-                currentSeenTrees.push_back(nextCurrentIndexTree);
+    for(int angle = 0; angle <= 360; angle++){
+        OrientationVector currentOrientationVector = getOrientationUnitVectorCoordinates(angle);
+        currentSeenTrees = {}; // clear trees
+
+        for(const Tree &tree : allTrees){
+            double currentOrientationAngleToTree = findAngleToTree(currentOrientationVector, tree, person);
+           
+            if(person.fieldOfViewAngle / 2 > currentOrientationAngleToTree)
+                currentSeenTrees.push_back(tree);
+
+            if(currentSeenTrees.size() > maxSeenTrees.size()){
+                maxSeenTrees = currentSeenTrees;
+                optimalAngle = angle;
+                optimalOrientation = currentOrientationVector;
+            }
+            if( angle == 270)
+            {
+                std::cout << "angle breaker reached";
+            }
         }
-        if(currentSeenTrees.size() > maxSeenTrees.size()){
-            maxSeenTrees = currentSeenTrees;
-            optimalTree = currentReferenceTree;
-        }
+        
     }
 
-    optimalOrientation = getUnitVector(optimalTree.xCoordinate,optimalTree.yCoordinate);
-
-    std::cout << optimalOrientation.xCoordinate << "," << optimalOrientation.yCoordinate << " is the person's orientation as a unit vector pointing to desired viewing orientation";
-        /*
-         to-be-completed: read< some prerequisites on vectors or/and barycentric coordinates.
-        */
-
+    std::cout << optimalOrientation.xCoordinate << "," << optimalOrientation.yCoordinate << " is the person's orientation as a unit vector pointing to desired viewing orientation\n";
+    std::cout << "Optimal viewing angle: " << optimalAngle;
 };
 
 int main() {
