@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cmath>
 
+#define PI 3.1415
+
 struct Person{
     double xCoordinate;
     double yCoordinate;
@@ -51,7 +53,7 @@ double findAngleToTree(const Tree &targetTree, const Tree &referencTree, const P
     UnitVector targetTreeUnitVector = getUnitVector(targetTree.xCoordinate - person.xCoordinate, targetTree.yCoordinate - person.yCoordinate);
     UnitVector referenceUnitTreeVector = getUnitVector(referencTree.xCoordinate - person.xCoordinate, referencTree.yCoordinate - person.yCoordinate);
     double dotProduct = (targetTreeUnitVector.xCoordinate * referenceUnitTreeVector.xCoordinate + targetTreeUnitVector.yCoordinate * referenceUnitTreeVector.yCoordinate);
-    double angle = acos(dotProduct);
+    double angle = acos(dotProduct) * 180 / PI; //acos(double) returns results expressed in radians. Therefore convert its result to degrees.
     return angle;
 };
 
